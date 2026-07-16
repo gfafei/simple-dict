@@ -107,10 +107,39 @@ Things that don't carry over automatically when moving this app to another machi
 
 - **The dictionary data isn't in the repo.** Download `stardict.db` per the "Getting started" steps above on every machine that runs the server, and point `DICT_DB_PATH` at it.
 - **`better-sqlite3` is a native module**, compiled per OS/architecture/Node version. `npm install` fetches a prebuilt binary for common combinations, but if you copy `node_modules` between machines (instead of running `npm install` fresh on each one) it likely won't work — reinstall/rebuild on the target machine.
-- **No production build/serving is wired up yet.** `npm run dev:client` and `npm run dev:server` are dev-only (Vite dev server + Express, connected via a dev-time proxy). There's no step that serves a built `client/dist` from the Express server or otherwise puts both behind one origin — that would need to be added before this could run outside of local development.
 - **No authentication, and `cors()` currently allows any origin.** That's fine as designed — this is a local single-user tool — but don't expose the server's port beyond localhost without adding auth first.
 - **Disk space**: `stardict.db` plus its `-wal`/`-shm` files run to roughly 1GB+. Make sure the target machine has room.
 - **Back up `stardict.db` if your favorites/history matter** — as noted above, the app writes directly into that file, so it's not safe to casually delete/replace once you've started using it.
+
+## Running in production with PM2
+
+The server serves the built client (`client/dist`) directly when `NODE_ENV=production`, so the whole app runs as a single process on one port.
+
+1. Install dependencies and build the client:
+
+   ```
+   npm install
+   npm run build
+   ```
+
+2. Set `DICT_DB_PATH` in `server/.env` (see "Getting started" above).
+
+3. Start with PM2 (config is `ecosystem.config.js` at the repo root):
+
+   ```
+   npm install -g pm2
+   pm2 start ecosystem.config.js
+   pm2 save
+   ```
+
+   Useful follow-ups: `pm2 logs simple-dict`, `pm2 restart simple-dict`, `pm2 startup` (to launch PM2 on boot).
+
+4. After pulling new code, rebuild the client and restart:
+
+   ```
+   npm run build
+   pm2 restart simple-dict
+   ```
 
 ## Status
 
