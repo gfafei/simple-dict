@@ -18,12 +18,15 @@ export function ensureSchema() {
 
     CREATE TABLE IF NOT EXISTS favorites (
       id INTEGER PRIMARY KEY,
-      word TEXT NOT NULL UNIQUE,
-      created_at TEXT DEFAULT (datetime('now'))
+      username TEXT NOT NULL,
+      word TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE (username, word)
     );
 
     CREATE TABLE IF NOT EXISTS history (
       id INTEGER PRIMARY KEY,
+      username TEXT NOT NULL,
       word TEXT NOT NULL,
       searched_at TEXT DEFAULT (datetime('now'))
     );

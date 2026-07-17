@@ -6,6 +6,7 @@ import { ensureSchema } from './db.js';
 import wordsRouter from './routes/words.js';
 import favoritesRouter from './routes/favorites.js';
 import historyRouter from './routes/history.js';
+import sessionRouter from './routes/session.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const clientDist = path.join(__dirname, '../../client/dist');
@@ -20,6 +21,7 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/words', wordsRouter);
 app.use('/api/favorites', favoritesRouter);
 app.use('/api/history', historyRouter);
+app.use('/api/session', sessionRouter);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(clientDist));

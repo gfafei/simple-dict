@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch --env-file=.env src/index.js",
-    "start": "node --env-file=.env src/index.js"
+    "start": "node --env-file=.env src/index.js",
+    "migrate:001": "node --env-file=.env migrations/001-add-username-to-favorites-and-history.js"
   },
   "dependencies": {
     "better-sqlite3": "^11.3.0",

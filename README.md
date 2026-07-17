@@ -11,9 +11,10 @@ A local English-Chinese dictionary app, built on the [ECDICT](https://github.com
 ## Features
 
 - Prefix word search (type "appl" to find "apple")
-- Favorites / bookmarks
-- Search history
+- Favorites / bookmarks (per user)
+- Search history (per user)
 - Audio pronunciation playback
+- Multi-user, no passwords: users type a username from an allow-list configured via `DICT_USERS` (see below), stored in the browser's `localStorage`
 
 ## Project layout
 
@@ -50,6 +51,14 @@ simple-dict/
 
    The client dev server proxies `/api` requests to `http://localhost:3001`.
 
+5. Set `DICT_USERS` in `server/.env` to a comma-separated list of usernames allowed to use the app:
+
+   ```
+   DICT_USERS=alice,bob
+   ```
+
+   There are no passwords — anyone who types a name from this list into the frontend's login screen is trusted as that user. This list is never sent to the frontend; an unrecognized username just fails to log in with an error. Restart the server after editing this.
+
 ## Database schema
 
 The database is the ECDICT `stardict.db` file itself. The `stardict` table comes from ECDICT as-is:
@@ -80,18 +89,29 @@ This app adds the following on top, defined in `server/src/db.js` and created au
 ```sql
 CREATE TABLE favorites (
   id INTEGER PRIMARY KEY,
-  word TEXT NOT NULL UNIQUE,
-  created_at TEXT DEFAULT (datetime('now'))
+  username TEXT NOT NULL,
+  word TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now')),
+  UNIQUE (username, word)
 );
 
 CREATE TABLE history (
   id INTEGER PRIMARY KEY,
+  username TEXT NOT NULL,
   word TEXT NOT NULL,
   searched_at TEXT DEFAULT (datetime('now'))
 );
 ```
 
-`favorites` and `history` reference words by the `word` text rather than a foreign key to `stardict.id`, so they stay meaningful even if `stardict` rows are ever reloaded/replaced.
+`favorites` and `history` reference words by the `word` text rather than a foreign key to `stardict.id`, so they stay meaningful even if `stardict` rows are ever reloaded/replaced. Both tables are scoped by `username`, so each hardcoded user gets their own favorites/history.
+
+`server/src/db.js`'s `ensureSchema()` only creates these tables if they don't exist yet (`CREATE TABLE IF NOT EXISTS`), so it won't add new columns to a database that already has them from before a schema change. If you have an existing `stardict.db` from before multi-user support (i.e. `favorites`/`history` without a `username` column), run the migration once (from `server/`):
+
+```
+npm run migrate:001
+```
+
+This drops and recreates both tables from scratch — see the comments in `server/migrations/001-add-username-to-favorites-and-history.js` — so any existing favorites/history rows are discarded.
 
 ## Notes
 
@@ -107,7 +127,7 @@ Things that don't carry over automatically when moving this app to another machi
 
 - **The dictionary data isn't in the repo.** Download `stardict.db` per the "Getting started" steps above on every machine that runs the server, and point `DICT_DB_PATH` at it.
 - **`better-sqlite3` is a native module**, compiled per OS/architecture/Node version. `npm install` fetches a prebuilt binary for common combinations, but if you copy `node_modules` between machines (instead of running `npm install` fresh on each one) it likely won't work — reinstall/rebuild on the target machine.
-- **No authentication, and `cors()` currently allows any origin.** That's fine as designed — this is a local single-user tool — but don't expose the server's port beyond localhost without adding auth first.
+- **No real authentication.** Usernames are an allow-list configured via `DICT_USERS` in `server/.env` (not committed) with no passwords — the client sends the chosen username in an `X-Username` header, and the server trusts it. This is fine for sharing with a small group of trusted people, but don't expose it beyond that without adding real auth. `cors()` currently allows any origin.
 - **Disk space**: `stardict.db` plus its `-wal`/`-shm` files run to roughly 1GB+. Make sure the target machine has room.
 - **Back up `stardict.db` if your favorites/history matter** — as noted above, the app writes directly into that file, so it's not safe to casually delete/replace once you've started using it.
 
